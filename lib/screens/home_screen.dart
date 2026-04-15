@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../models/app_user.dart';
-import '../services/auth_service.dart';
+
+import '../services/api_service.dart';
 
 class HomeScreen extends StatelessWidget {
-  final AppUser user;
-
-  const HomeScreen({super.key, required this.user});
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final api = context.watch<ApiService>();
+    final u = api.user;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Smart Campus'),
@@ -18,48 +19,47 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await context.read<AuthService>().signOut();
+              await api.logout();
               if (context.mounted) context.go('/login');
             },
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         children: [
-          Card(
-            child: ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(user.displayName.isNotEmpty ? user.displayName : user.email),
-              subtitle: Text(user.email),
+          if (u != null)
+            Card(
+              child: ListTile(
+                title: Text(u.name),
+                subtitle: Text(u.email),
+                trailing: u.isAdmin ? const Chip(label: Text('Admin')) : null,
+              ),
             ),
-          ),
           const SizedBox(height: 24),
-          if (user.isAdmin) ...[
-            _Tile(
-              icon: Icons.inbox,
-              title: 'Complaint management',
-              subtitle: 'View and manage complaints',
+          _Btn(
+            icon: Icons.report_problem_outlined,
+            label: 'Submit complaint',
+            onTap: () => context.push('/complaints/submit'),
+          ),
+          _Btn(
+            icon: Icons.list_alt,
+            label: 'View complaints',
+            onTap: () => context.push('/complaints/list'),
+          ),
+          _Btn(
+            icon: Icons.event_available,
+            label: 'Attendance',
+            onTap: () => context.push('/attendance'),
+          ),
+          if (u?.isAdmin ?? false) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            _Btn(
+              icon: Icons.admin_panel_settings,
+              label: 'Admin: manage complaints',
               onTap: () => context.push('/admin/complaints'),
-            ),
-            _Tile(
-              icon: Icons.people,
-              title: 'Attendance reports',
-              subtitle: 'Sessions and attendance by course',
-              onTap: () => context.push('/admin/attendance'),
-            ),
-          ] else ...[
-            _Tile(
-              icon: Icons.feedback,
-              title: 'Complaints',
-              subtitle: 'Submit and track your complaints',
-              onTap: () => context.push('/complaints'),
-            ),
-            _Tile(
-              icon: Icons.face,
-              title: 'Attendance',
-              subtitle: 'Register your face and view attendance',
-              onTap: () => context.push('/attendance'),
             ),
           ],
         ],
@@ -68,23 +68,25 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _Tile extends StatelessWidget {
+class _Btn extends StatelessWidget {
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final String label;
   final VoidCallback onTap;
 
-  const _Tile({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _Btn({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: FilledButton.tonalIcon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          alignment: Alignment.centerLeft,
+        ),
       ),
     );
   }

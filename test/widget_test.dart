@@ -1,15 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:smartcampus/main.dart';
+import 'package:smartcampus/services/api_service.dart';
 
 void main() {
-  testWidgets('Smoke test — app shell', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: Center(child: Text('Smart Campus')),
-        ),
-      ),
-    );
-    expect(find.text('Smart Campus'), findsOneWidget);
+  testWidgets('App shows login when not authenticated', (WidgetTester tester) async {
+    final api = ApiService();
+    await api.init();
+    await tester.pumpWidget(SmartCampusApp(api: api));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsOneWidget);
   });
 }

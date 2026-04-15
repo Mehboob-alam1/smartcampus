@@ -1,48 +1,33 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
-import 'theme/app_theme.dart';
-import 'app_router.dart';
-import 'services/auth_service.dart';
-import 'services/complaint_service.dart';
-import 'services/attendance_service.dart';
-import 'services/notification_service.dart';
 
-// Background FCM handler (must be top-level).
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-}
+import 'app_router.dart';
+import 'services/api_service.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  FirebaseMessaging.onMessage.listen(NotificationService.onMessage);
-  FirebaseMessaging.onMessageOpenedApp.listen(NotificationService.onMessageOpenedApp);
-  runApp(const SmartCampusApp());
+  final api = ApiService();
+  await api.init();
+  runApp(SmartCampusApp(api: api));
 }
 
 class SmartCampusApp extends StatelessWidget {
-  const SmartCampusApp({super.key});
+  final ApiService api;
+
+  const SmartCampusApp({super.key, required this.api});
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        Provider(create: (_) => AuthService()),
-        Provider(create: (_) => ComplaintService()),
-        Provider(create: (_) => AttendanceService()),
-        Provider(create: (_) => NotificationService()),
-      ],
+    return ChangeNotifierProvider.value(
+      value: api,
       child: Builder(
         builder: (context) {
+          final router = createRouter(context.read<ApiService>());
           return MaterialApp.router(
             title: 'Smart Campus',
-            locale: const Locale('en'),
             theme: appTheme,
-            routerConfig: createRouter(context),
+            routerConfig: router,
           );
         },
       ),

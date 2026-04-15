@@ -20,4 +20,8 @@ final ThemeData appTheme = ThemeData(
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     filled: true,
   ),
+  snackBarTheme: SnackBarThemeData(
+    behavior: SnackBarBehavior.floating,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  ),
 );

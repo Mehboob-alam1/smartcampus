@@ -1,10 +1,12 @@
-import 'package:intl/intl.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../models/attendance_record.dart';
-import '../services/auth_service.dart';
-import '../services/attendance_service.dart';
+
+import '../models/attendance.dart';
+import '../services/api_service.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -14,85 +16,143 @@ class AttendanceScreen extends StatefulWidget {
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
-  bool? _faceRegistered;
+  late Future<List<AttendanceRecord>> _future;
+  bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    _checkFace();
+    _reload();
   }
 
-  Future<void> _checkFace() async {
-    final userId = context.read<AuthService>().currentUser?.uid ?? '';
-    final reg = await context.read<AttendanceService>().isFaceRegistered(userId);
-    if (mounted) setState(() => _faceRegistered = reg);
+  void _reload() {
+    _future = context.read<ApiService>().getAttendance();
+  }
+
+  Future<void> _registerFace() async {
+    final picker = ImagePicker();
+    final x = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
+    if (x == null || !mounted) return;
+    setState(() => _busy = true);
+    final err = await context.read<ApiService>().registerFace(File(x.path));
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(err ?? 'Face registered — you can mark attendance')),
+    );
+  }
+
+  Future<void> _markAttendance() async {
+    final picker = ImagePicker();
+    final x = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
+    if (x == null || !mounted) return;
+    setState(() => _busy = true);
+    final err = await context.read<ApiService>().markAttendance(File(x.path));
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _reload();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(err ?? 'Attendance recorded')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final userId = context.read<AuthService>().currentUser?.uid ?? '';
-
     return Scaffold(
-      appBar: AppBar(title: const Text('My attendance')),
-      body: _faceRegistered == null
-          ? const Center(child: CircularProgressIndicator())
-          : _faceRegistered != true
-              ? Center(
-                  child: Padding(
+      appBar: AppBar(title: const Text('Attendance')),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () async {
+              setState(_reload);
+              await _future;
+            },
+            child: FutureBuilder<List<AttendanceRecord>>(
+              future: _future,
+              builder: (context, snap) {
+                if (snap.connectionState != ConnectionState.done) {
+                  return const ListView(children: [SizedBox(height: 200), Center(child: CircularProgressIndicator())]);
+                }
+                if (snap.hasError) {
+                  return ListView(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text('Error: ${snap.error}', textAlign: TextAlign.center),
+                      ),
+                    ],
+                  );
+                }
+                final list = snap.data ?? [];
+                if (list.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.face_retouching_natural, size: 64, color: Colors.grey[600]),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Register your face to use automatic attendance check-in.',
-                          textAlign: TextAlign.center,
+                    children: const [
+                      SizedBox(height: 48),
+                      Text(
+                        'No attendance records yet.\nUse the buttons below: register your face once, then mark attendance with a selfie.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: list.length,
+                  itemBuilder: (_, i) {
+                    final r = list[i];
+                    return Card(
+                      child: ListTile(
+                        title: Text(DateFormat.yMMMd().format(r.date)),
+                        subtitle: Text(r.status),
+                        trailing: Icon(
+                          r.status == 'present' ? Icons.check_circle : Icons.cancel,
+                          color: r.status == 'present' ? Colors.green : Colors.grey,
                         ),
-                        const SizedBox(height: 24),
-                        FilledButton.icon(
-                          onPressed: () => context.push('/attendance/register-face').then((_) => _checkFace()),
-                          icon: const Icon(Icons.face),
-                          label: const Text('Register face'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : StreamBuilder<List<AttendanceRecord>>(
-                  stream: context.read<AttendanceService>().streamAttendanceByUser(userId),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final list = snapshot.data!;
-                    if (list.isEmpty) {
-                      return const Center(child: Text('No attendance recorded yet'));
-                    }
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: list.length,
-                      itemBuilder: (context, i) {
-                        final r = list[i];
-                        return Card(
-                          child: ListTile(
-                            title: Text(r.courseName),
-                            subtitle: Text(DateFormat('MMM d, y • HH:mm', 'en').format(r.markedAt)),
-                            trailing: r.verified ? const Icon(Icons.verified, color: Colors.green) : null,
-                          ),
-                        );
-                      },
+                      ),
                     );
                   },
-                ),
-      floatingActionButton: _faceRegistered == true
+                );
+              },
+            ),
+          ),
+          if (_busy) const ModalBarrier(dismissible: false, color: Color(0x33000000)),
+          if (_busy) const Center(child: CircularProgressIndicator()),
+        ],
+      ),
+      floatingActionButton: _busy
           ? null
-          : FloatingActionButton(
-              onPressed: () => context.push('/attendance/register-face').then((_) => _checkFace()),
-              child: const Icon(Icons.face),
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.extended(
+                  heroTag: 'reg',
+                  onPressed: _registerFace,
+                  icon: const Icon(Icons.face),
+                  label: const Text('Register face'),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton.extended(
+                  heroTag: 'mark',
+                  onPressed: _markAttendance,
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Mark attendance'),
+                ),
+              ],
             ),
     );
   }
