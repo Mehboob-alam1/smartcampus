@@ -1,6 +1,8 @@
 {
+  "installCommand": "npm install",
+  "outputDirectory": "public",
   "functions": {
-    "api/**/*.js": {
+    "api/[...slug].js": {
       "maxDuration": 30
     }
   }

@@ -52,6 +52,11 @@ class HomeScreen extends StatelessWidget {
             label: 'Attendance',
             onTap: () => context.push('/attendance'),
           ),
+          _Btn(
+            icon: Icons.person_outline,
+            label: 'My profile',
+            onTap: () => context.push('/profile'),
+          ),
           if (u?.isAdmin ?? false) ...[
             const SizedBox(height: 16),
             const Divider(),
@@ -60,6 +65,16 @@ class HomeScreen extends StatelessWidget {
               icon: Icons.admin_panel_settings,
               label: 'Admin: manage complaints',
               onTap: () => context.push('/admin/complaints'),
+            ),
+            _Btn(
+              icon: Icons.group_outlined,
+              label: 'Admin: users',
+              onTap: () => context.push('/admin/users'),
+            ),
+            _Btn(
+              icon: Icons.calendar_month_outlined,
+              label: 'Admin: all attendance',
+              onTap: () => context.push('/admin/attendance'),
             ),
           ],
         ],

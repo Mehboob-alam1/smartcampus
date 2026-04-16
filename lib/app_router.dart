@@ -6,7 +6,10 @@ import 'screens/complaint_submit_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/admin_attendance_screen.dart';
 import 'screens/admin_complaints_screen.dart';
+import 'screens/admin_users_screen.dart';
+import 'screens/profile_screen.dart';
 import 'services/api_service.dart';
 
 GoRouter createRouter(ApiService api) {
@@ -31,7 +34,10 @@ GoRouter createRouter(ApiService api) {
       GoRoute(path: '/complaints/submit', builder: (_, __) => const ComplaintSubmitScreen()),
       GoRoute(path: '/complaints/list', builder: (_, __) => const ComplaintListScreen()),
       GoRoute(path: '/attendance', builder: (_, __) => const AttendanceScreen()),
+      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/admin/complaints', builder: (_, __) => const AdminComplaintsScreen()),
+      GoRoute(path: '/admin/users', builder: (_, __) => const AdminUsersScreen()),
+      GoRoute(path: '/admin/attendance', builder: (_, __) => const AdminAttendanceScreen()),
     ],
   );
 }

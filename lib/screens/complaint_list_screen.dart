@@ -38,7 +38,7 @@ class _ComplaintListScreenState extends State<ComplaintListScreen> {
           future: _future,
           builder: (context, snap) {
             if (snap.connectionState != ConnectionState.done) {
-              return const ListView(children: [SizedBox(height: 200), Center(child: CircularProgressIndicator())]);
+              return  ListView(children: [SizedBox(height: 200), Center(child: CircularProgressIndicator())]);
             }
             if (snap.hasError) {
               return ListView(
@@ -52,7 +52,7 @@ class _ComplaintListScreenState extends State<ComplaintListScreen> {
             }
             final list = snap.data ?? [];
             if (list.isEmpty) {
-              return const ListView(
+              return  ListView(
                 physics: AlwaysScrollableScrollPhysics(),
                 children: [
                   SizedBox(height: 120),

@@ -1,6 +1,6 @@
-const { getPool } = require('./_db.js');
-const { verifyRequest } = require('./_auth.js');
-const { handleOptions, json, getJsonBody } = require('./_helpers.js');
+const { getPool } = require('../lib/_db.js');
+const { verifyRequest } = require('../lib/_auth.js');
+const { handleOptions, json, getJsonBody } = require('../lib/_helpers.js');
 
 async function callPythonVerify(userId, imageBase64) {
   const base = process.env.PYTHON_FACE_URL || 'http://127.0.0.1:5000';

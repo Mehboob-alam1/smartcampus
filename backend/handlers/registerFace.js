@@ -1,8 +1,8 @@
 /**
  * Saves face embedding via Python service (call once per user before markAttendance).
  */
-const { verifyRequest } = require('./_auth.js');
-const { handleOptions, json, getJsonBody } = require('./_helpers.js');
+const { verifyRequest } = require('../lib/_auth.js');
+const { handleOptions, json, getJsonBody } = require('../lib/_helpers.js');
 
 async function callPythonRegister(userId, imageBase64) {
   const base = process.env.PYTHON_FACE_URL || 'http://127.0.0.1:5000';

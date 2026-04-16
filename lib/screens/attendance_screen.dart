@@ -83,7 +83,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               future: _future,
               builder: (context, snap) {
                 if (snap.connectionState != ConnectionState.done) {
-                  return const ListView(children: [SizedBox(height: 200), Center(child: CircularProgressIndicator())]);
+                  return  ListView(children: [SizedBox(height: 200), Center(child: CircularProgressIndicator())]);
                 }
                 if (snap.hasError) {
                   return ListView(

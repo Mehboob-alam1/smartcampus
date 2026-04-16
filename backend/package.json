@@ -4,7 +4,9 @@
   "private": true,
   "description": "Vercel serverless API for Smart Campus (PostgreSQL + JWT)",
   "scripts": {
-    "dev": "vercel dev"
+    "dev": "vercel dev",
+    "build": "echo \"No static build — serverless API only\"",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -1,6 +1,6 @@
-const { getPool } = require('./_db.js');
-const { verifyRequest } = require('./_auth.js');
-const { handleOptions, json } = require('./_helpers.js');
+const { getPool } = require('../lib/_db.js');
+const { verifyRequest } = require('../lib/_auth.js');
+const { handleOptions, json } = require('../lib/_helpers.js');
 
 module.exports = async (req, res) => {
   if (handleOptions(req, res)) return;

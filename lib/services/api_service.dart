@@ -194,4 +194,118 @@ class ApiService extends ChangeNotifier {
     if (r.statusCode == 201 || r.statusCode == 200) return null;
     return data['error']?.toString() ?? 'Attendance not marked';
   }
+
+  /// Current user profile (read).
+  Future<User> getProfile() async {
+    final uri = Uri.parse('$baseUrl/api/getProfile');
+    final r = await http.get(uri, headers: _headers(jsonBody: false));
+    final data = await _parse(r);
+    if (r.statusCode >= 200 && r.statusCode < 300 && data['user'] != null) {
+      return User.fromJson(data['user'] as Map<String, dynamic>);
+    }
+    throw Exception(data['error']?.toString() ?? 'Failed to load profile');
+  }
+
+  /// Update name and/or password for the logged-in user.
+  Future<String?> updateProfile({
+    String? name,
+    String? currentPassword,
+    String? newPassword,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/updateProfile');
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name.trim();
+    if (newPassword != null && newPassword.isNotEmpty) {
+      body['newPassword'] = newPassword;
+      body['currentPassword'] = currentPassword ?? '';
+    }
+    final r = await http.put(uri, headers: _headers(), body: jsonEncode(body));
+    final data = await _parse(r);
+    if (r.statusCode >= 200 && r.statusCode < 300 && data['user'] != null) {
+      final u = User.fromJson(data['user'] as Map<String, dynamic>);
+      if (_token != null) await _saveSession(_token!, u);
+      return null;
+    }
+    return data['error']?.toString() ?? 'Profile update failed';
+  }
+
+  /// Admin: list all users (no passwords).
+  Future<List<User>> getUsersAdmin() async {
+    final uri = Uri.parse('$baseUrl/api/getUsers');
+    final r = await http.get(uri, headers: _headers(jsonBody: false));
+    final data = await _parse(r);
+    if (r.statusCode >= 200 && r.statusCode < 300) {
+      final list = data['users'] as List<dynamic>? ?? [];
+      return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    throw Exception(data['error']?.toString() ?? 'Failed to load users');
+  }
+
+  /// Admin: update a user (name, email, isAdmin). Returns new JWT in [outToken] when editing yourself.
+  Future<String?> adminUpdateUser({
+    required int id,
+    String? name,
+    String? email,
+    bool? isAdmin,
+    void Function(String newToken)? onNewToken,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/adminUpdateUser');
+    final body = <String, dynamic>{'id': id};
+    if (name != null) body['name'] = name.trim();
+    if (email != null) body['email'] = email.trim().toLowerCase();
+    if (isAdmin != null) body['isAdmin'] = isAdmin;
+    final r = await http.post(uri, headers: _headers(), body: jsonEncode(body));
+    final data = await _parse(r);
+    if (r.statusCode >= 200 && r.statusCode < 300) {
+      final tok = data['token'] as String?;
+      if (tok != null && data['user'] != null) {
+        final u = User.fromJson(data['user'] as Map<String, dynamic>);
+        await _saveSession(tok, u);
+        onNewToken?.call(tok);
+      }
+      return null;
+    }
+    return data['error']?.toString() ?? 'Update failed';
+  }
+
+  /// Admin: delete a user (cannot delete yourself).
+  Future<String?> deleteUser(int id) async {
+    final uri = Uri.parse('$baseUrl/api/deleteUser');
+    final r = await http.post(
+      uri,
+      headers: _headers(),
+      body: jsonEncode({'id': id}),
+    );
+    final data = await _parse(r);
+    if (r.statusCode >= 200 && r.statusCode < 300) return null;
+    return data['error']?.toString() ?? 'Delete failed';
+  }
+
+  /// Admin: delete a complaint by id.
+  Future<String?> deleteComplaint(int id) async {
+    final uri = Uri.parse('$baseUrl/api/deleteComplaint');
+    final r = await http.post(
+      uri,
+      headers: _headers(),
+      body: jsonEncode({'id': id}),
+    );
+    final data = await _parse(r);
+    if (r.statusCode >= 200 && r.statusCode < 300) return null;
+    return data['error']?.toString() ?? 'Delete failed';
+  }
+
+  /// Admin: all attendance rows (optional filter by [userId]).
+  Future<List<AttendanceRecord>> getAllAttendance({int? userId}) async {
+    var uri = Uri.parse('$baseUrl/api/getAllAttendance');
+    if (userId != null) {
+      uri = uri.replace(queryParameters: {'userId': '$userId'});
+    }
+    final r = await http.get(uri, headers: _headers(jsonBody: false));
+    final data = await _parse(r);
+    if (r.statusCode >= 200 && r.statusCode < 300) {
+      final list = data['attendance'] as List<dynamic>? ?? [];
+      return list.map((e) => AttendanceRecord.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    throw Exception(data['error']?.toString() ?? 'Failed to load attendance');
+  }
 }

@@ -1,0 +1,339 @@
+{
+  "info": {
+    "name": "Smart Campus API",
+    "description": "Vercel serverless API for Smart Campus (PostgreSQL + JWT).\n\n1. Set collection variable **baseUrl** (no trailing slash).\n2. Run **Register** or **Login** — tests save **token** automatically.\n3. Other requests use `Authorization: Bearer {{token}}`.\n\nFace endpoints (**registerFace**, **markAttendance**) need **PYTHON_FACE_URL** on the server.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://smartcampus-drab.vercel.app" },
+    { "key": "token", "value": "" },
+    { "key": "testEmail", "value": "postman-test@example.com" },
+    { "key": "testPassword", "value": "testpass123" },
+    { "key": "testName", "value": "Postman User" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "API landing (HTML)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 or 409', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  pm.test('Has token', function () { pm.expect(j.token).to.be.a('string'); });",
+                  "  pm.collectionVariables.set('token', j.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{testName}}\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const j = pm.response.json();",
+                  "pm.test('Has token', function () { pm.expect(j.token).to.be.a('string'); });",
+                  "pm.collectionVariables.set('token', j.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/login"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Complaints",
+      "item": [
+        {
+          "name": "Get complaints (my list)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const j = pm.response.json();",
+                  "pm.test('Has complaints array', function () { pm.expect(j.complaints).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/getComplaints"
+          },
+          "response": []
+        },
+        {
+          "name": "Get complaints (all — admin only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/getComplaints?all=true"
+          },
+          "response": []
+        },
+        {
+          "name": "Add complaint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "const j = pm.response.json();",
+                  "pm.test('Has complaint', function () { pm.expect(j.complaint).to.be.an('object'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"hostel\",\n  \"description\": \"Test complaint from Postman\"\n}"
+            },
+            "description": "category: hostel | transport | cafeteria | other",
+            "url": "{{baseUrl}}/api/addComplaint"
+          },
+          "response": []
+        },
+        {
+          "name": "Update complaint status (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"status\": \"resolved\"\n}"
+            },
+            "description": "status: pending | resolved. Requires isAdmin JWT.",
+            "url": "{{baseUrl}}/api/updateComplaint"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Get attendance (my records)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const j = pm.response.json();",
+                  "pm.test('Has attendance array', function () { pm.expect(j.attendance).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/getAttendance"
+          },
+          "response": []
+        },
+        {
+          "name": "Register face (needs PYTHON_FACE_URL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageBase64\": \"<paste-base64-jpeg-or-png>\"\n}"
+            },
+            "url": "{{baseUrl}}/api/registerFace"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark attendance (needs PYTHON_FACE_URL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageBase64\": \"<paste-base64-jpeg-or-png>\"\n}"
+            },
+            "url": "{{baseUrl}}/api/markAttendance"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User profile",
+      "item": [
+        {
+          "name": "Get profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/getProfile"
+          },
+          "response": []
+        },
+        {
+          "name": "Update profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"currentPassword\": \"oldpassword\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "description": "Omit newPassword/currentPassword if you only change name.",
+            "url": "{{baseUrl}}/api/updateProfile"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/getUsers"
+          },
+          "response": []
+        },
+        {
+          "name": "Update user (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 2,\n  \"name\": \"New Name\",\n  \"email\": \"user@example.com\",\n  \"isAdmin\": false\n}"
+            },
+            "description": "At least one of name, email, isAdmin. Response may include new token if you edit yourself.",
+            "url": "{{baseUrl}}/api/adminUpdateUser"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 2\n}" },
+            "url": "{{baseUrl}}/api/deleteUser"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete complaint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 1\n}" },
+            "url": "{{baseUrl}}/api/deleteComplaint"
+          },
+          "response": []
+        },
+        {
+          "name": "Get all attendance",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Optional query: ?userId=3",
+            "url": "{{baseUrl}}/api/getAllAttendance"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

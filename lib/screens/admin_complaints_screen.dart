@@ -35,6 +35,33 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
     }
   }
 
+  Future<void> _delete(Complaint c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete complaint?'),
+        content: Text('Complaint #${c.id} will be removed permanently.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final err = await context.read<ApiService>().deleteComplaint(c.id);
+    if (!mounted) return;
+    if (err != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted')));
+      setState(_reload);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,6 +102,11 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                         Row(
                           children: [
                             Chip(label: Text(c.statusLabel)),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: 'Delete',
+                              onPressed: () => _delete(c),
+                            ),
                             const Spacer(),
                             if (c.status != 'pending')
                               TextButton(
